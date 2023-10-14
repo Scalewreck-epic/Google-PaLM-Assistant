@@ -2,7 +2,7 @@ import google.generativeai as palm
 import speech_recognition as sr
 import pyttsx3 as text_to_speech
 
-palm.configure(api_key="AIzaSyA9g-sNGYVXhIbg1CLOKrhECXZceOnBuiw")
+palm.configure(api_key="YOUR API KEY")
 listener = sr.Recognizer()
 
 assistant_name = 'computer'
