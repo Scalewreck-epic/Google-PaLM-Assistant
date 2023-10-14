@@ -2,25 +2,28 @@ import google.generativeai as palm
 import speech_recognition as sr
 import pyttsx3 as text_to_speech
 
+palm.configure(api_key="AIzaSyA9g-sNGYVXhIbg1CLOKrhECXZceOnBuiw")
 listener = sr.Recognizer()
-engine = text_to_speech.init()
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id)
-
-palm.configure(api_key="YOUR API KEY")
 
 assistant_name = 'computer'
+messages = []
 
 defaults = {
     'model': 'models/chat-bison-001',
-    'temperature': 0.6,
+    'temperature': 0.25,
     'candidate_count': 1,
     'top_k': 40,
     'top_p': 0.95,
 }
 
 
-def respond(text):
+def speak(text):
+    engine = text_to_speech.init()
+    voices = engine.getProperty('voices')
+
+    engine.setProperty('voice', voices[1].id)
+
+    print(f'{assistant_name}: {text}')
     engine.say(text)
     engine.runAndWait()
 
@@ -28,34 +31,45 @@ def respond(text):
 def get_command():
     try:
         with sr.Microphone() as source:
+            listener.adjust_for_ambient_noise(source, duration=0.2)
+
             print('listening')
-            voice = listener.listen(source)
-            command = listener.recognize_google(voice)
-            command = command.lower()
+            audio = listener.listen(source)
 
-            if assistant_name in command:
-                command = command.replace(assistant_name, '')
+            user_input = listener.recognize_google(audio)
 
-                print('You: ' + command)
-    except:
-        pass
-    return command
+            if assistant_name in user_input:
+                command = user_input.replace(assistant_name, '')
+
+                print(f'User command: {command}')
+                return command
+    except sr.RequestError as e:
+        print("Could not request results; {0}".format(e))
+    except sr.UnknownValueError:
+        print("Unknown value error.")
+
+
+def send_command():
+    response = palm.chat(
+        **defaults,
+        context="Limit yourself to 5 sentences",  # No listening to big paragraphs
+        messages=messages,
+    )
+
+    messages.append({'author': '1', 'content': response.last})
+    return response.last
 
 
 def run_assistant():
     command = get_command()
 
     if command:
-        print("Loading response..")
-        response = palm.chat(
-            **defaults,
-            prompt=command
-        )
+        messages.append({"author": '0', "content": command})
 
-        print(response)
-        respond(response.last)
-    else:
-        pass
+        response = send_command()
+        speak(response)
+        print(messages)
 
 
-run_assistant()
+while True:
+    run_assistant()
